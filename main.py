@@ -4,87 +4,85 @@ TASK: mapping couplings in molecular dimers
 ML APPROACH: Feed-forward neural network (FFNN)
 
 CAPABILITIES:
-    Noise can be introduced to spectra
-    Spectra with low signal-to-noise ratio can be dropped
-    Amount of noise can be scanned to determine effect(s) on FFNN performance
+    - Noise can be introduced to spectra
+    - Spectra with low signal-to-noise ratio can be dropped
+    - Amount of noise can be scanned to determine effect(s) on FFNN performance
         
 KEY NOTES:  
-    Clean data are loaded into a 'central dataset' (avoids re-loading data between scan points)
-    The number of t2 timepoints along the waiting time dimension in each dataset MUST be consistent across all datasets
+    - Clean data are loaded into a 'central dataset' (avoids re-loading data between scan points)
+    - The number of t2 timepoints along the waiting time dimension in each dataset MUST be consistent across all datasets
 '''
 
 import os
-import sys
 import pickle
-import supplemental as fcns
+
+# Import from modules
+from modules.config import get_directories
+from modules.ml_model import get_num_ml_iterations
+from modules.utils import print_to_log_file, check_inputs, convert_parameter_datatypes, initalize_dataframes, read_input_file, get_git_info
+from modules.data_processing import load_central_dataset, classify_central_dataset
+from modules.debugging_tools import initialize_check_system
+from modules.training_pipeline import ML_iterations
 
 
 if __name__ == "__main__":
     
-    # UNCOMMENT IF RUNNING LOCALLY
-    # if len(sys.argv) == 1:  # Default behavior if no args are passed
-    #     sys.argv = ["ml_main.py", "additive_test_local.inp", "runlist_local.txt"]  # Replace with desired arguments
-    
     verbose = True
-    input_file = sys.argv[1]
-    runlist_file = sys.argv[2]
+    dirs = get_directories()
     
-    # Read and check inputs
-    f = open(input_file)
-    p = fcns.read_input_file(f)
+    # Read inputs
+    f = open(os.paths.join(dirs['working'], "input.txt"))
+    p = read_input_file(f)
     f.close()
     
-    p['working directory'] = os.getcwd()
-    p['Slurm job ID'] = os.environ.get("SLURM_JOB_ID")    # COMMENT IF RUNNING LOCALLY
-    # p['Slurm job ID'] = 12345                               # UNCOMMENT IF RUNNING LOCALLY
-    
-    p['outputs_path'] = os.path.join(p['working directory'], f"job{p['Slurm job ID']}_Outputs")
-    if not os.path.exists(p['outputs_path']):
-        os.makedirs(p['outputs_path'])
-        
-    p['log filename'] = os.path.join(p['outputs_path'], f"job{p['Slurm job ID']}.OREOSlog")
+    runlist_file = os.paths.join(dirs['working'], "runlist.txt")
+    if not runlist_file:
+        runlist_file = None
+
+    dirs['outputs'] = os.path.join(dirs['working'], f"job{p['jobname']}_Outputs")
+    dirs['log file'] = os.path.join(dirs['outputs'], f"job{dirs['jobname']}.log")
+    os.makedirs(dirs['outputs'], exist_ok=True)
     
     # set up log file
-    with open(p['log filename'], "w") as f: 
-        f.write("ML2DVS-Feedforward-Variable")
-    print(f"See {p['log filename']} for further job details.", flush=True)
+    with open(dirs['log file'], "w") as f: 
+        f.write("Log file initiated.")
     
-    fcns.print_to_log_file(p['log filename'], f'''\n
-Branch: FFNN_scan_editing
-Working directory: {p['working directory']}
-job ID : {p['Slurm job ID']}''')
+    print_to_log_file(dirs['log file'], f'''\n
+Git Repository Information:
+   {get_git_info()}
 
+Working directory: {dirs['working']}
+job name : {p['jobname']}''')
 
     # Process inputs    
-    fcns.check_inputs(p)
-    fcns.convert_parameter_datatypes(p)
-    fcns.get_num_ml_iterations(p)
+    check_inputs(p, dirs)
+    convert_parameter_datatypes(p)
+    get_num_ml_iterations(p, dirs)
     
     # Load and classify central dataset
-    central_data = fcns.load_central_dataset(runlist_file, p) 
-    central_data, class_information = fcns.classify_central_dataset(p, central_data)
+    central_data = load_central_dataset(runlist_file, p) 
+    central_data, class_information = classify_central_dataset(p, central_data)
     
-    p, accuracy_df, f1_df = fcns.initalize_dataframes(p)
-    check_spectrum = fcns.initialize_check_system(p, central_data)
+    p, accuracy_df, f1_df = initalize_dataframes(p)
+    check_spectrum = initialize_check_system(p, central_data)
     
     # ML iterations      
-    p, accuracy_df, f1_df = fcns.ML_iterations(p = p,
-                                            central_data = central_data,
-                                            classes = class_information,
-                                            check_spectrum = check_spectrum, 
-                                            accuracy_df = accuracy_df, 
-                                            f1_df = f1_df)
+    p, accuracy_df, f1_df = ML_iterations(
+        p = p,
+        dirs = dirs,
+        central_data = central_data,
+        classes = class_information,
+        check_spectrum = check_spectrum, 
+        accuracy_df = accuracy_df, 
+        f1_df = f1_df
+        )
     
     # Save final results                         
-    accuracy_df.to_csv(f"{p['outputs_path']}/job{p['Slurm job ID']}_Accuracies.csv",
-                       index_label = 'Iteration'
-                       )
-    f1_df.to_csv(f"{p['outputs_path']}/job{p['Slurm job ID']}_F1scores.csv",
-                 index_label = 'Iteration'
-                 )
+    accuracy_df.to_csv(f"{dirs['outputs']}/job{p['jobname']}_Accuracies.csv", index_label = 'Iteration')
+    f1_df.to_csv(f"{dirs['outputs']}/job{p['jobname']}_F1scores.csv", index_label = 'Iteration')
     
     # save inputs
-    with open(f"{p['outputs_path']}/job{p['Slurm job ID']}_inputs.pkl", 'wb') as f:
-        pickle.dump(p, f)   
+    with open(f"{dirs['outputs']}/job{p['jobname']}_inputs.pkl", 'wb') as f:
+        pickle.dump(p, f)
         
-    fcns.print_to_log_file(p['log filename'],'''~~~ All iterations complete! ~~~\n\nNow exiting.''')
+    print_to_log_file(dirs['log file'],'''~~~ All iterations complete! ~~~\n\nNow exiting.''')

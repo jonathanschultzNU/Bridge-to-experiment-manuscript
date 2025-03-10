@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import pickle
 from utils import print_to_log_file
 
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+
 def plot_spectrum(data_dict: dict, save_path: str):
     """
     Generates a contour plot of a 2D spectrum.
@@ -47,6 +49,7 @@ def plot_spectrum(data_dict: dict, save_path: str):
     
     pass
 
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
 def create_and_save_line_plot(x: np.ndarray, y: np.ndarray, title: str, x_label: str, y_label: str, ymin: float, ymax: float, save_path: str):
     """
@@ -76,8 +79,9 @@ def create_and_save_line_plot(x: np.ndarray, y: np.ndarray, title: str, x_label:
 
     pass
 
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
-def save_checked_spectrum(p: dict, check_spectrum: dict, iteration_data: dict, iteration_number: int):
+def save_checked_spectrum(p: dict, dirs: dict, check_spectrum: dict, iteration_data: dict, iteration_number: int):
     """
     Saves a sample 2D spectrum for debugging purposes.
     
@@ -97,10 +101,12 @@ def save_checked_spectrum(p: dict, check_spectrum: dict, iteration_data: dict, i
         if (iteration_number+1) % p['spec_save_interval'] == 0:
             try:
                 check_spectrum['spectrum'] = iteration_data['spectra'][check_spectrum['system index selected'],:,:,0]
-                plot_spectrum(check_spectrum, f"{save_loc}/job{p['Slurm job ID']}_spec_{iteration_number+1}.png")
-                with open(f"{save_loc}/job{p['Slurm job ID']}_spec_{iteration_number+1}.pkl", 'wb') as f:
+                plot_spectrum(check_spectrum, f"{save_loc}/job{p['jobname']}_spec_{iteration_number+1}.png")
+                with open(f"{save_loc}/job{p['jobname']}_spec_{iteration_number+1}.pkl", 'wb') as f:
                     pickle.dump(check_spectrum, f)
                 
             except Exception as e:
-                print_to_log_file(p['log filename'], f'An error occured while generating or saving 2D spectrum: {e}')
+                print_to_log_file(dirs['log file'], f'An error occured while generating or saving 2D spectrum: {e}')
     pass
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 

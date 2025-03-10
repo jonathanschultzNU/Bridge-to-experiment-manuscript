@@ -1,5 +1,6 @@
+jobname = test
 task = noise_addition
-noise_method = profile_scaling
+noise_method = additive
 noise_fraction = 0
 SNR_filter = True
 noise_threshold = 0.01

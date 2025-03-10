@@ -5,6 +5,10 @@ import os
 import numpy as np
 import pandas as pd
 import pickle
+from typing import Optional
+from modules.utils import extract_pattern
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
 def load_system_data(database_path: str, sys_ID: str):
     """
@@ -22,8 +26,9 @@ def load_system_data(database_path: str, sys_ID: str):
         fullEntry = pickle.load(pklfile)
     return fullEntry["Rw1w3Absorptive"], fullEntry['w1'], fullEntry['w3'], fullEntry['t2']
 
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
-def load_central_dataset(runlist_file: str, p: dict) -> dict:
+def load_central_dataset(runlist_file: Optional[str], p: dict) -> dict:
     """
     Load and preprocess the central dataset for machine learning.
 
@@ -34,8 +39,19 @@ def load_central_dataset(runlist_file: str, p: dict) -> dict:
     Returns:
         dict: Central dataset with system IDs, spectra, and metadata.
     """
-    central_ID_numbers = np.loadtxt(runlist_file, dtype=int)
-    central_data = {'system ID numbers': central_ID_numbers, 'system IDs': [f"runJS{str(i).zfill(7)}" for i in central_ID_numbers]}
+
+    if runlist_file is None:
+        filenames = [f for f in os.listdir(p['data_path']) if f.endswith(".pkl")]
+        
+        # Extract 7-digit numbers from filenames and convert to integers
+        central_ID_numbers = [
+            int(name) for file in filenames if (name := extract_run_pattern(pattern=r'\d{7}', arg=file))
+        ]
+        
+    else:
+        central_ID_numbers = np.loadtxt(runlist_file, dtype=int)
+    
+    central_data = {'system ID numbers': central_ID_numbers, 'system IDs': [f"Hamiltonian{str(i).zfill(7)}" for i in central_ID_numbers]}
     
     data_full, w1, w3, t2 = [], [], [], []
     for system_ID in central_data['system IDs']:
@@ -48,6 +64,7 @@ def load_central_dataset(runlist_file: str, p: dict) -> dict:
     central_data.update({'spectra': np.array(data_full), 'w1': np.array(w1), 'w3': np.array(w3), 't2': np.array(t2)})
     return central_data
 
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
 def classify_central_dataset(p: dict, central_data: dict) -> tuple:
     """
@@ -74,3 +91,5 @@ def classify_central_dataset(p: dict, central_data: dict) -> tuple:
     
     central_data['classes'] = np.array(all_classes)
     return central_data, class_information
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 

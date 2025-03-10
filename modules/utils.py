@@ -2,178 +2,219 @@
 Module containing helper functions for logging, debugging, and other utilities.
 """
 
-import logging
 import sys
 import pandas as pd
+from git import Repo, 
+import re
 
-def check_inputs(p):
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+
+def extract_pattern(pattern, arg=None):
+    """Extracts the pattern from the input string arg."""
+    if arg is None:
+        return None
+    match = re.search(pattern, arg)
+    return match.group(0) if match else None
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+
+def get_git_info():
+    try:
+        repo = Repo(search_parent_directories=True)
+        branch = repo.active_branch.name
+        commit_hash = repo.head.object.hexsha
+        tag = next((t.name for t in repo.tags if t.commit == repo.head.object), "No tag available")
+        return f"Branch: {branch}\nCommit: {commit_hash}\nTag: {tag}"
+    except exc.InvalidGitRepositoryError:
+        return "Not a Git repository."
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+
+def read_input_file(f):
+    from pathlib import Path
+    p = {}
+    data = f.readlines()
+    keys = ['class bounds', 'noise fraction', 'bandwidth', 'center frequency']
+    for line in data:
+        key, value = line.split("=")
+        if key.strip() == "data_path" or key.strip() == "data_labels":
+           p[key.strip()] = Path(r"{value.strip()}")
+        if key.strip() in keys:
+           entries = value.count(",") + 1 
+           entry_values = value.split(",")
+           
+           temp = []
+           for i in range(entries):
+               temp.append(entry_values[i].strip())
+           p[key.strip()] = np.array(temp)
+        else:
+           p[key.strip()] = value.strip()
+           
+    p['f1 scores'] = ['micro', 'macro', 'weighted', None]
+           
+    return p
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+
+def check_inputs(p, dirs):
+    """
+    Validates input parameters and ensures required keys are present.
     
-    options = ['noise_addition', 'pump_bandwidth', 'pump_center', 'dual_pump']
-    if p['task'] not in options:
-        print_to_log_file(p['log filename'],"ERROR: unsupported task requested. Exiting.")
-        raise Exception("ERROR: Unsupported task requested.")
-        sys.exit()
+    Parameters:
+        p (dict): Dictionary containing user-defined parameters.
+        dirs (dict): Dictionary containing directory paths.
+    """
     
-    # Ensure all necessary keys are specified
-    necessary_keys = ['data_path', 'data_labels', 'class_bounds','inSize', 'hiddenSize',
-                      'num_epochs', 'batchSize', 'lr', 'p_dropout'] 
+    # Define valid task options
+    valid_tasks = ['noise', 'bandwidth', 'center frequency', 'bandwidth and center frequency']
+    if p['task'] not in valid_tasks:
+        print_to_log_file(dirs['log file'], "ERROR: Unsupported task requested. Exiting.")
+        raise ValueError(f"Unsupported task requested: {p['task']}")
+
+    # Required keys
+    required_keys = [
+        'data path', 'data labels', 'class bounds', 'input size', 'hidden layer size',
+        'number of epochs', 'batch size', 'learning rate', 'dropout probability'
+    ]
     
-    # Extend to include keys with available defaults
-    necessary_keys.extend(['save_ML_output', 'save_ML_report_images', 'save_2D_plots', 'spec_save_interval',
-                           'check_system_ID', 't2_truncate', 'train_test_split', 'torch_seed',
-                           'numpy_seed', 'split_seed'])
-    
-    if p['task'] == 'noise addition':
-        necessary_keys.extend(['SNR_filter', 'noise_threshold', 'noise_method', 'noise_fraction'])
-        
-    elif p['task'] == 'pump_bandwidth' or p['task'] == 'pump_center' or p['task'] == 'dual_pump':
-        necessary_keys.extend(['pump_bandwidth', 'pump_center'])
-    
-    print_to_log_file(p['log filename'], '\nChecking for defaults:')
-    for key in necessary_keys:
+    # Keys with defaults
+    optional_keys = [
+        'save ML output', 'save ML report images', 'save 2D plots', 'spec save interval',
+        'check-system ID', 't2 truncate', 'train-test split', 'torch seed', 'numpy seed', 'split seed'
+    ]
+
+    if p['task'] == 'noise':
+        required_keys.extend(['SNR filter', 'SNR threshold', 'noise method', 'noise fraction'])
+
+    elif p['task'] in ['bandwidth', 'center frequency', 'bandwidth and center frequency']:
+        required_keys.extend(['bandwidth', 'center frequency'])
+
+    # Check for missing keys
+    print_to_log_file(dirs['log file'], "\nChecking for missing parameters:")
+    for key in required_keys + optional_keys:
         if key not in p:
             default_val = get_default_parameters(key)
-            if default_val == None:
-                print_to_log_file(p['log filename'], f"ERROR: {key} unspecified. Exiting.")
-                raise Exception(f"ERROR: {key} unspecified.")
-                sys.exit()
+            if default_val is None:
+                print_to_log_file(dirs['log file'], f"ERROR: {key} unspecified. Exiting.")
+                raise KeyError(f"Missing required parameter: {key}")
             else:
                 p[key] = default_val
-                print_to_log_file(p['log filename'], f"{key} set to default value of: {p[key]}")
-    print_to_log_file(p['log filename'], 'Done\n')
-                
+                print_to_log_file(dirs['log file'], f"{key} set to default value: {p[key]}")
+    
+    print_to_log_file(dirs['log file'], "All required parameters verified.\n")
 
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+                
 def convert_parameter_datatypes(p):
     """
-    Convert data types of user-inputs
+    Converts input parameters to appropriate data types.
 
     Parameters:
-    p: A dictionary containing required parameters.
-
+        p (dict): Dictionary containing user-defined parameters.
     """
     
-    p['class_bounds'] = [float(item) for item in p['class_bounds']]
+    p['class bounds'] = [float(item) for item in p['class bounds']]
     
-    if p['task'] == 'noise_addition':
-        p['noise_fraction'] = [float(item) for item in p['noise_fraction']]
-        p['noise_threshold'] = float(p['noise_threshold'])
+    if p['task'] == 'noise':
+        p['noise fraction'] = [float(item) for item in p['noise fraction']]
+        p['SNR threshold'] = float(p['SNR threshold'])
         
-    elif p['task'] == 'pump_bandwidth':    
-        p['pump_bandwidth'] = [float(item) for item in p['pump_bandwidth']]
-        p['pump_center'] = float(p['pump_center'][0])
+    elif p['task'] == 'bandwidth':    
+        p['bandwidth'] = [float(item) for item in p['bandwidth']]
+        p['center frequency'] = float(p['center frequency'][0])
         
-    elif p['task'] == 'pump_center':    
-        p['pump_center'] = [float(item) for item in p['pump_center']]
-        p['pump_bandwidth'] = float(p['pump_bandwidth'][0])
+    elif p['task'] == 'center frequency':    
+        p['center frequency'] = [float(item) for item in p['center frequency']]
+        p['bandwidth'] = float(p['bandwidth'][0])
         
-    elif p['task'] == 'dual_pump':    
-        p['pump_center'] = [float(item) for item in p['pump_center']]
-        p['pump_bandwidth'] = [float(item) for item in p['pump_bandwidth']]
-            
-    keys = ['lr', 'p_dropout', 'train_test_split']
-    for key in keys:
+    elif p['task'] == 'bandwidth and center frequency':    
+        p['center frequency'] = [float(item) for item in p['center frequency']]
+        p['bandwidth'] = [float(item) for item in p['bandwidth']]
+        
+        
+    float_keys = ['learning rate', 'dropout probability', 'train-test split']
+    int_keys = ['input size', 'hidden layer size', 'number of epochs', 'batch size', 'spec save interval']
+
+    for key in float_keys:
         p[key] = float(p[key])
-        
-    keys = ['inSize', 'hiddenSize', 'num_epochs', 'batchSize', 'spec_save_interval']
-    for key in keys:
+
+    for key in int_keys:
         p[key] = int(p[key])
 
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
 def get_default_parameters(arg):
     """
-    Define and return default parameter value
+    Returns the default parameter value if available.
 
     Parameters:
-    arg (string): key describing the requested parameter
+        arg (str): Name of the parameter.
 
     Returns:
-    default_dict[arg]: default value if available, otherwise None
+        The default value if found, otherwise None.
     """
     
-    default_dict = {'save_ML_output': 'True', 
-                    'save_ML_report_images': 'True', 
-                    'save_2D_plots': 'True',
-                    'spec_save_interval': 5,
-                    'check_system_ID': 19785,
-                    't2_truncate': 'False',
-                    'train_test_split': 0.8,
-                    'torch_seed': 2942,
-                    'numpy_seed': 72067,
-                    'split_seed': 72067,
+    default_dict = {'save ML output': 'True', 
+                    'save ML report images': 'True', 
+                    'save 2D plots': 'True',
+                    'spec save interval': 5,
+                    'check-system ID': 11,
+                    't2 truncate': 'False',
+                    'train-test split': 0.8,
+                    'torch seed': 2942,
+                    'numpy seed': 72067,
+                    'split seed': 72067,
                     }
     
-    if arg in default_dict:
-        return default_dict[arg]
-    else:
-        return None
+    return default_dict.get(arg, None)
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
     
-def initalize_dataframes(p):
+def initialize_dataframes(p):
     """
-    Initialize empty dataframes for logging ML performance and other metrics
+    Initializes dataframes for logging ML performance and other metrics.
 
     Parameters:
+        p (dict): Dictionary containing user-defined parameters.
 
     Returns:
+        tuple: Updated parameter dictionary, accuracy dataframe, F1-score dataframe.
     """
     
-    if p['task'] == 'noise_addition':
-        scan_key = 'noise_fraction'
-        scan_item_df = 'Noise fraction'
-        
-    elif p['task'] == 'pump_bandwidth':
-        scan_key = 'pump_bandwidth'
-        scan_item_df = 'Pump bandwidth'
-        
-    elif p['task'] == 'pump_center':
-        scan_key = 'pump_center'
-        scan_item_df = 'Pump center'
-        
-    elif p['task'] == 'ablation':
-        scan_key = 'window_centers'
-        scan_item_df = 'Window center inds'
-        
-    elif p['task'] == 'dual_pump':
-        scan_key = {}
-        scan_item_df = {}
-        scan_key[1] = 'pump_bandwidth'
-        scan_item_df[1] = 'Pump bandwidth'
-        scan_key[2] = 'pump_center'
-        scan_item_df[2] = 'Pump center'
-
-    p['scan_key'] = scan_key
-    p['scan_item_df'] = scan_item_df
-        
-    if p['task'] == 'dual_pump':
+    task_to_scan_key = {
+        'noise': 'noise fraction',
+        'bandwidth': 'bandwidth',
+        'center frequency': 'center frequency',
+        'bandwidth and center frequency': {'1': 'bandwidth', '2': 'center frequency'}
+        }
     
-        accuracy_df = pd.DataFrame(index = range(1, p['total_passes'] + 1), 
-                                   columns = [scan_item_df[1], scan_item_df[2], 'Train accuracy', 'Train-test accuracy', 'Test accuracy', 'Test top2 accuracy'])
+    scan_key = task_to_scan_key.get(p['task'], None)
+    p['scan key'] = scan_key
+
         
-        f1_df = pd.DataFrame(index = range(1, p['total_passes'] + 1), 
-                             columns = [scan_item_df[1], scan_item_df[2], 'Train micro f1', 'Train macro f1', 'Train weighted f1', 
-                                        'Train-test micro f1', 'Train-test macro f1', 'Train-test weighted f1', 
-                                        'Test micro f1', 'Test macro f1', 'Test weighted f1'] )
+    if p['task'] == 'bandwidth and center frequency':
+    
+        accuracy_columns = ['bandwidth', 'center frequency', 'Train accuracy', 'Train-test accuracy', 'Test accuracy', 'Test top2 accuracy']
+        f1_columns = [
+            'bandwidth', 'center frequency', 'Train micro f1', 'Train macro f1', 'Train weighted f1',
+            'Train-test micro f1', 'Train-test macro f1', 'Train-test weighted f1',
+            'Test micro f1', 'Test macro f1', 'Test weighted f1'
+        ]
     
     else:
-        accuracy_df = pd.DataFrame(index = range(1, p['total_passes'] + 1), 
-                                   columns = [scan_item_df, 'Train accuracy', 'Train-test accuracy', 'Test accuracy', 'Test top2 accuracy'])
+        accuracy_columns = [scan_key, 'Train accuracy', 'Train-test accuracy', 'Test accuracy', 'Test top2 accuracy']
+        f1_columns = [
+            scan_key, 'Train micro f1', 'Train macro f1', 'Train weighted f1',
+            'Train-test micro f1', 'Train-test macro f1', 'Train-test weighted f1',
+            'Test micro f1', 'Test macro f1', 'Test weighted f1'
+        ]
         
-        f1_df = pd.DataFrame(index = range(1, p['total_passes'] + 1), 
-                             columns = [scan_item_df, 'Train micro f1', 'Train macro f1', 'Train weighted f1', 
-                                        'Train-test micro f1', 'Train-test macro f1', 'Train-test weighted f1', 
-                                        'Test micro f1', 'Test macro f1', 'Test weighted f1'] )
+    accuracy_df = pd.DataFrame(index=range(1, p['total passes'] + 1), columns=accuracy_columns)
+    f1_df = pd.DataFrame(index=range(1, p['total passes'] + 1), columns=f1_columns)
     
     return p, accuracy_df, f1_df
-
-
-def setup_logging(logfile: str):
-    """
-    Set up logging configuration.
-
-    Parameters:
-        logfile (str): Path to log file.
-    """
-    logging.basicConfig(filename=logfile, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
 def print_to_log_file(filename: str, message: str):
     """
@@ -185,19 +226,20 @@ def print_to_log_file(filename: str, message: str):
     """
     with open(filename, "a") as logfile:
         logfile.write(f'{message}\n')
-        
 
-def remove_workspace_variables():
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+
+def remove_workspace_variables(variables_to_delete):
     """
-    Clears large unused variables to free memory before the next iteration.
+    Clears variables from workspace
     """
-    variables_to_delete = ['iteration_data', 'training_data', 'testing_data']
     for var_name in variables_to_delete:
         try:
             del var_name
         except KeyError:
             pass
         
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
 def get_list_dimensions(lst):
     """
@@ -212,3 +254,5 @@ def get_list_dimensions(lst):
     if not isinstance(lst, list):
         return 0
     return 1 + max(get_list_dimensions(item) for item in lst)
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 

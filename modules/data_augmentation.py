@@ -7,6 +7,7 @@ import numpy as np
 from utils import print_to_log_file
 import sys
 
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
 def add_noise(data_dict: dict, logfilename: str, method: str, noise_fraction: float, SNR_filter: bool, threshold: float) -> tuple:
     """
@@ -174,6 +175,7 @@ No spectra were dropped due to low SNR. Average SNR of all spectra: {avg_total_S
    
     return data_dict, SNR_summary
 
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
 def apply_pump(data_dict: dict, carrier: float, bandwidth: float) -> dict:
     """
@@ -207,6 +209,7 @@ def apply_pump(data_dict: dict, carrier: float, bandwidth: float) -> dict:
 
     return data_dict
 
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
 def pollute_data(p: dict, central_data: dict, iteration_inds: list) -> tuple:
     """
@@ -220,32 +223,38 @@ def pollute_data(p: dict, central_data: dict, iteration_inds: list) -> tuple:
     Returns:
         tuple: (Modified dataset, Summary of modifications applied)
     """
+    
     data = deepcopy(central_data)
     data = self_normalize_datasets(data, p['log filename'])
     
     if p['num_vars'] == 1:
         
         iteration_number = iteration_inds[0]
-    
-        if p['task'] == 'noise_addition':
-            data, SNR_summary = add_noise(data, p['log filename'], p['noise_method'], p['noise_fraction'][iteration_number], p['SNR_filter'], p['noise_threshold'])
+        if p['task'] == 'noise':
+            
+            data, SNR_summary = add_noise(data, 
+                                          p['log filename'], 
+                                          p['noise method'], 
+                                          p['noise fraction'][iteration_number], 
+                                          p['SNR filter'], 
+                                          p['SNR threshold'])
             return data, SNR_summary
         
-        elif p['task'] == 'pump_bandwidth':
-            data = apply_pump(data, p['pump_center'], p['pump_bandwidth'][iteration_number])
+        elif p['task'] == 'bandwidth':
+            data = apply_pump(data, p['center frequency'], p['bandwidth'][iteration_number])
             return data, None
         
-        elif p['task'] == 'pump_center':
-            data = apply_pump(data, p['pump_center'][iteration_number], p['pump_bandwidth'])
+        elif p['task'] == 'center frequency':
+            data = apply_pump(data, p['center frequency'][iteration_number], p['bandwidth'])
             return data, None
     
     elif p['num_vars'] == 2:
         
-        if p['task'] == 'dual_pump':
-            data = apply_pump(data, p['pump_center'][iteration_inds[1]], p['pump_bandwidth'][iteration_inds[0]])
+        if p['task'] == 'bandwidth and center frequency':
+            data = apply_pump(data, p['center frequency'][iteration_inds[1]], p['bandwidth'][iteration_inds[0]])
             return data, None
         
-
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
 def self_normalize_datasets(data_dict: dict, logfilename: str) -> dict:
     """
@@ -258,6 +267,7 @@ def self_normalize_datasets(data_dict: dict, logfilename: str) -> dict:
     Returns:
         dict: Normalized dataset.
     """
+    
     maxvals = []
     for i in range(data_dict['Number of systems']):
         temp = deepcopy(data_dict['spectra'][i,:,:,:])

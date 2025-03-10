@@ -6,6 +6,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset
 import numpy as np
 
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
 def f1_score_custom(y_true, y_pred, average_methods_list=['micro', 'macro', 'weighted', None]):
     """
@@ -25,6 +26,7 @@ def f1_score_custom(y_true, y_pred, average_methods_list=['micro', 'macro', 'wei
         f1_scores[method] = 100 * f1_score(y_true, y_pred, average=method) if method else (list(f1_score(y_true, y_pred, average=None)), None)
     return f1_scores
 
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
 class PyTorchDataset(Dataset):
     """
@@ -42,7 +44,7 @@ class PyTorchDataset(Dataset):
         classes = classes[shuffle_indices]
         sys_data = sys_data[shuffle_indices]
         
-        split_point = int(p['train_test_split'] * len(system_ID_numbers))
+        split_point = int(p['train-test split'] * len(system_ID_numbers))
         if isTrain:
             sys_data = sys_data[:split_point]
         else:
@@ -56,7 +58,8 @@ class PyTorchDataset(Dataset):
 
     def __len__(self):
         return len(self.imgs)
-    
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
 class NeuralNet(nn.Module):
     """
@@ -75,3 +78,5 @@ class NeuralNet(nn.Module):
         out = self.dropout(out)
         out = self.l2(out)
         return out
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
