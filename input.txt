@@ -1,0 +1,14 @@
+task = noise_addition
+noise_method = profile_scaling
+noise_fraction = 0
+SNR_filter = True
+noise_threshold = 0.01
+class_bounds = -805, -755, -705, -655, -605, -555, -505, -455, -405, -355, -305, -255, -205, -155, -105, -55, -5, 5, 55, 105, 155, 205, 255, 305, 355, 405, 455, 505, 555, 605, 665, 705, 755, 805 
+inSize = 22801
+hiddenSize = 300
+num_epochs = 30
+batchSize = 100
+lr = 0.001
+p_dropout = 0.2
+trainTestSplit = 0.8
+spec_save_interval = 1
