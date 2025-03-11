@@ -1,22 +1,9 @@
 '''
-TASK: mapping couplings in molecular dimers 
-  
-ML APPROACH: Feed-forward neural network (FFNN)
-
-CAPABILITIES:
-    - Noise can be introduced to spectra
-    - Spectra with low signal-to-noise ratio can be dropped
-    - Amount of noise can be scanned to determine effect(s) on FFNN performance
-        
-KEY NOTES:  
-    - Clean data are loaded into a 'central dataset' (avoids re-loading data between scan points)
-    - The number of t2 timepoints along the waiting time dimension in each dataset MUST be consistent across all datasets
+Main code for Bridge-to-experiment-manuscript repo
 '''
 
 import os
 import pickle
-
-# Import from modules
 from modules.config import get_directories
 from modules.ml_model import get_num_ml_iterations
 from modules.utils import print_to_log_file, check_inputs, convert_parameter_datatypes, initalize_dataframes, read_input_file, get_git_info
@@ -35,9 +22,10 @@ if __name__ == "__main__":
     with open(os.path.join(dirs['working'], "input.txt"), "r") as f:
         p = read_input_file(f)
     
-    runlist_file = os.paths.join(dirs['working'], "runlist.txt")
-    if not runlist_file:
-        runlist_file = None
+    # system_IDs_file is optional (only needed if a subset of systems are desired)
+    system_IDs_file = os.paths.join(dirs['working'], "system_IDs.txt")
+    if not system_IDs_file:
+        system_IDs_file = None
 
     dirs['outputs'] = os.path.join(dirs['working'], f"job{p['jobname']}_Outputs")
     dirs['log file'] = os.path.join(dirs['outputs'], f"job{p['jobname']}.log")
@@ -60,9 +48,10 @@ job name : {p['jobname']}''')
     get_num_ml_iterations(p, dirs)
     
     # Load and classify central dataset
-    central_data = load_central_dataset(runlist_file, p) 
+    central_data = load_central_dataset(system_IDs_file, p) 
     central_data, class_information = classify_central_dataset(p, central_data)
     
+    # Initialize objects for later
     p, accuracy_df, f1_df = initalize_dataframes(p)
     check_spectrum = initialize_check_system(p, central_data)
     
@@ -81,7 +70,7 @@ job name : {p['jobname']}''')
     accuracy_df.to_csv(f"{dirs['outputs']}/job{p['jobname']}_Accuracies.csv", index_label = 'Iteration')
     f1_df.to_csv(f"{dirs['outputs']}/job{p['jobname']}_F1scores.csv", index_label = 'Iteration')
     
-    # save inputs
+    # Save inputs
     with open(f"{dirs['outputs']}/job{p['jobname']}_inputs.pkl", 'wb') as f:
         pickle.dump(p, f)
         
