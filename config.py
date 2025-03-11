@@ -23,11 +23,10 @@ def get_directories():
         print(f"ERROR: The specified database directory '{database_dir}' does not exist.")
     
     # Define directories
-    dirs = {
-        'working': os.getcwd(),
-        'database': database_dir,
-        'labels': os.path.join(database_dir, 'labels.csv'),
-        'Outputs': os.path.join(os.getcwd(), 'Outputs')
-    }
+    dirs = {'working': os.getcwd(),
+            'database': database_dir,
+            'dataset': os.path.join(database_dir, '/data_subset.pkl'),
+            'labels': os.path.join(database_dir, 'data_subset_system_parameters.csv')
+            }
     
     return dirs

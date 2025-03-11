@@ -21,11 +21,6 @@ if __name__ == "__main__":
     # Read inputs
     with open(os.path.join(dirs['working'], "input.txt"), "r") as f:
         p = read_input_file(f)
-    
-    # system_IDs_file is optional (only needed if a subset of systems are desired)
-    system_IDs_file = os.paths.join(dirs['working'], "system_IDs.txt")
-    if not system_IDs_file:
-        system_IDs_file = None
 
     dirs['outputs'] = os.path.join(dirs['working'], f"job{p['jobname']}_Outputs")
     dirs['log file'] = os.path.join(dirs['outputs'], f"job{p['jobname']}.log")
@@ -48,8 +43,8 @@ job name : {p['jobname']}''')
     get_num_ml_iterations(p, dirs)
     
     # Load and classify central dataset
-    central_data = load_central_dataset(system_IDs_file, p) 
-    central_data, class_information = classify_central_dataset(p, central_data)
+    central_data = load_central_dataset(p, dirs['dataset']) 
+    central_data, class_information = classify_central_dataset(p, dirs['labels'], central_data)
     
     # Initialize objects for later
     p, accuracy_df, f1_df = initalize_dataframes(p)
@@ -67,11 +62,11 @@ job name : {p['jobname']}''')
         )
     
     # Save final results                         
-    accuracy_df.to_csv(f"{dirs['outputs']}/job{p['jobname']}_Accuracies.csv", index_label = 'Iteration')
-    f1_df.to_csv(f"{dirs['outputs']}/job{p['jobname']}_F1scores.csv", index_label = 'Iteration')
+    accuracy_df.to_csv(f"{dirs['outputs']}/accuracies.csv", index_label = 'Iteration')
+    f1_df.to_csv(f"{dirs['outputs']}/F1scores.csv", index_label = 'Iteration')
     
     # Save inputs
-    with open(f"{dirs['outputs']}/job{p['jobname']}_inputs.pkl", 'wb') as f:
+    with open(f"{dirs['outputs']}/inputs.pkl", 'wb') as f:
         pickle.dump(p, f)
         
     print_to_log_file(dirs['log file'],'''~~~ All iterations complete! ~~~\n\nNow exiting.''')

@@ -11,7 +11,7 @@ def find_image_index(central_data: dict, ID: int) -> int:
     Finds the index of a dataset entry by its system ID.
 
     Parameters:
-        central_data (dict): Dictionary containing dataset information, including system IDs.
+        central_data (dict): Dictionary containing dataset information, including system index.
         ID (int): The system ID number to search for.
 
     Returns:
@@ -32,7 +32,7 @@ def initialize_check_system(p, central_data):
 
     Parameters:
         p (dict): Dictionary containing user-defined parameters, including 'check system ID'.
-        central_data (dict): Dictionary containing dataset information, including system IDs and spectral data.
+        central_data (dict): Dictionary containing dataset information, including system index and spectral data.
 
     Returns:
         dict: A dictionary containing the selected system's details:

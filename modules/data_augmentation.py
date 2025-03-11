@@ -25,11 +25,10 @@ def add_noise(data_dict: dict, logfilename: str, method: str, noise_fraction: fl
     """
     
     # generate arrays to log widths of clean spectra and noise
-    data_dict['noise width'] = np.zeros((data_dict['Number of systems'], data_dict['nt2']))
-    data_dict['signal width'] = np.zeros((data_dict['Number of systems'], data_dict['nt2']))
+    data_dict['noise width'] = np.zeros((data_dict['number of systems'], data_dict['nt2']))
+    data_dict['signal width'] = np.zeros((data_dict['number of systems'], data_dict['nt2']))
     
-    # SeedVec = np.arange(start = startSeed, stop = startSeed + data_dict['Number of systems'], step = 1, dtype = int)
-    SeedVec = deepcopy(data_dict['system ID numbers'])
+    SeedVec = deepcopy(data_dict['system index'])
     
     if method not in ['additive', 'intensity-dependent']:
         error_message = f"ERROR: Invalid noise method '{method}' specified. Valid options are: ['additive', 'intensity-dependent']."
@@ -42,14 +41,14 @@ def add_noise(data_dict: dict, logfilename: str, method: str, noise_fraction: fl
             
         # list of maximum signals as a function of system
         maxvals = []
-        for i in range(data_dict['Number of systems']):
+        for i in range(data_dict['number of systems']):
             temp = deepcopy(data_dict['spectra'][i,:,:,:])
             mv = np.max(np.max(np.abs(temp)))
             maxvals.append(mv)
         
         absolute_max = np.max(maxvals)
         
-        for i in range(data_dict['Number of systems']):
+        for i in range(data_dict['number of systems']):
             
             rng = np.random.default_rng(seed = SeedVec[i] + 10000)
             
@@ -61,7 +60,6 @@ def add_noise(data_dict: dict, logfilename: str, method: str, noise_fraction: fl
             for j in range(data_dict['nt2']):
                 indv_spec = deepcopy(data_dict['spectra'][i,:,:,j])
                 data_dict['signal width'][i][j] = np.mean(np.abs(indv_spec))
-                
                 data_dict['noise width'][i][j] = noise_fraction*absolute_max
             
             # add noise
@@ -71,7 +69,7 @@ def add_noise(data_dict: dict, logfilename: str, method: str, noise_fraction: fl
     elif method == 'intensity-dependent': 
         # signal + signal * noise
         
-        for i in range(data_dict['Number of systems']):
+        for i in range(data_dict['number of systems']):
             
             # generate new random noise array for each system
             rng = np.random.default_rng(seed = SeedVec[i] + 10000)
@@ -99,16 +97,15 @@ def add_noise(data_dict: dict, logfilename: str, method: str, noise_fraction: fl
         
     # SNR Filtering
     SNR_summary = {
-        'per system': {
-            'System IDs': [],
+            'per system': {},
+            'system index': [],
             'SNR at t2 = 0': [],
             'SNR at t2 = end': [],
             'avg SNR of all t2': [],
             'avg SNR of kept t2': [],
             'avg SNR of dropped t2': [],
-        },
-        'dropped images': {},
-    }
+            'dropped images': {},
+            }
     
     spec_count, drop_count, avg_drop_SNR, avg_keep_SNR, avg_total_SNR = 0, 0, 0, 0, 0
     data_dict['dropped images'] = {}
@@ -118,7 +115,7 @@ def add_noise(data_dict: dict, logfilename: str, method: str, noise_fraction: fl
         data_dict['dropped images'][system_ID] = np.ones(data_dict['nt2'], dtype=bool)
         drop_count_perSys, avg_keep_SNR_perSys, avg_drop_SNR_perSys, avg_total_SNR_perSys = 0, 0, 0, 0
         
-        SNR_summary['per system']['System IDs'].append(system_ID.copy())
+        SNR_summary['per system']['system index'].append(system_ID.copy())
         
         for j in range(data_dict['nt2']):
             noise_width = data_dict['noise width'][i][j]
@@ -269,7 +266,7 @@ def self_normalize_datasets(data_dict: dict, logfilename: str) -> dict:
     """
     
     maxvals = []
-    for i in range(data_dict['Number of systems']):
+    for i in range(data_dict['number of systems']):
         temp = deepcopy(data_dict['spectra'][i,:,:,:])
         mv = np.max(np.max(np.max(np.abs(temp))))
         maxvals.append(mv) # log maximum signals  
@@ -284,14 +281,14 @@ Smallest max signal = {np.min(maxvals)}''')
     else:
         print_to_log_file(logfilename, 'Now self-normalizing data for each system...')       
     
-        for i in range(data_dict['Number of systems']):
+        for i in range(data_dict['number of systems']):
             data_dict['spectra'][i,:,:,:] = data_dict['spectra'][i,:,:,:]/maxvals[i]
     
         maxvals = []
-        for i in range(data_dict['Number of systems']):
+        for i in range(data_dict['number of systems']):
             temp = deepcopy(data_dict['spectra'][i,:,:,:])
             mv = np.max(np.max(np.abs(temp)))
-            maxvals.append(mv) # log maximum signals  
+            maxvals.append(mv) 
             
         print_to_log_file(logfilename, f'''Post normalization:
     Largest signal = {np.max(maxvals)}

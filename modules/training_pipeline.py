@@ -463,7 +463,7 @@ def initialize_running_dict(p, dirs, stage):
     if stage == 'training':
         running_dict = {'number of images': [], 
                         'number of correct predictions': [],
-                        'system IDs': [],
+                        'system index': [],
                         't2s': [],
                         'labels': [], 
                         'predictions': [], 
@@ -473,7 +473,7 @@ def initialize_running_dict(p, dirs, stage):
     elif stage == 'testing in training':
         running_dict = {'number of images': [], 
                         'number of correct predictions': [],
-                        'system IDs': [],
+                        'system index': [],
                         't2s': [],
                         'labels': [], 
                         'predictions': [], 
@@ -482,7 +482,7 @@ def initialize_running_dict(p, dirs, stage):
     elif stage == 'testing':
         running_dict = {'number of images': [], 
                         'number of correct predictions': [],
-                        'system IDs': [],
+                        'system index': [],
                         't2s': [],
                         'labels': [], 
                         'predictions': [], 
@@ -509,7 +509,7 @@ def initialize_training(p, dirs, train_loader, test_loader):
     # dictionaries to keep track of items per epoch per batch
     training_dict = {'number of batches': n_batches_training,
                      'epoch index': [], 
-                     'system IDs': [],
+                     'system index': [],
                      't2s': [],
                      'labels': [],
                      'predictions': [],
@@ -528,7 +528,7 @@ def initialize_training(p, dirs, train_loader, test_loader):
     
     testing_in_training_dict = {'number of batches': n_batches_testing,
                                 'epoch index': [], 
-                                'system IDs': [],
+                                'system index': [],
                                 't2s': [],
                                 'labels': [],
                                 'predictions': [],
@@ -557,7 +557,7 @@ def log_epoch_outcomes(epoch_index, stage_dict, running_dict, isTrain=False):
     
     stage_dict['epoch index'].append(epoch_index)
     stage_dict['number of images'].append(n_images_per_epoch)
-    stage_dict['system IDs'].append(running_dict['system IDs'])
+    stage_dict['system index'].append(running_dict['system index'])
     stage_dict['t2s'].append(running_dict['t2s'])
     stage_dict['labels'].append(running_dict['labels'])
     stage_dict['predictions'].append(running_dict['predictions'])
@@ -595,7 +595,7 @@ def log_testing_outcomes(running_dict, classes, n_batches):
     
     results_dict = {'number of batches': n_batches,
                     'number of images': n_images,
-                    'system IDs': running_dict['system IDs'],
+                    'system index': running_dict['system index'],
                     't2s': running_dict['t2s'],
                     'labels': running_dict['labels'],
                     'predictions': running_dict['predictions'],
@@ -732,7 +732,7 @@ def update_running_dict(running_dict, IDs, t2s, labels, outputs, stage, loss=Non
     
     running_dict['number of images'].append(number_of_images)
     running_dict['number of correct predictions'].append(number_correct)
-    running_dict['system IDs'].extend(IDs.squeeze().cpu().numpy())
+    running_dict['system index'].extend(IDs.squeeze().cpu().numpy())
     running_dict['t2s'].extend(t2s.squeeze().cpu().numpy())
     running_dict['labels'].extend(labels.cpu().numpy())
     running_dict['predictions'].extend(predictions.cpu().numpy())
