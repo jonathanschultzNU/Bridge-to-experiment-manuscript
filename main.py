@@ -24,6 +24,7 @@ from modules.data_processing import load_central_dataset, classify_central_datas
 from modules.debugging_tools import initialize_check_system
 from modules.training_pipeline import ML_iterations
 
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
 if __name__ == "__main__":
     
@@ -31,16 +32,15 @@ if __name__ == "__main__":
     dirs = get_directories()
     
     # Read inputs
-    f = open(os.paths.join(dirs['working'], "input.txt"))
-    p = read_input_file(f)
-    f.close()
+    with open(os.path.join(dirs['working'], "input.txt"), "r") as f:
+        p = read_input_file(f)
     
     runlist_file = os.paths.join(dirs['working'], "runlist.txt")
     if not runlist_file:
         runlist_file = None
 
     dirs['outputs'] = os.path.join(dirs['working'], f"job{p['jobname']}_Outputs")
-    dirs['log file'] = os.path.join(dirs['outputs'], f"job{dirs['jobname']}.log")
+    dirs['log file'] = os.path.join(dirs['outputs'], f"job{p['jobname']}.log")
     os.makedirs(dirs['outputs'], exist_ok=True)
     
     # set up log file

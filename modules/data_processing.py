@@ -45,7 +45,7 @@ def load_central_dataset(runlist_file: Optional[str], p: dict) -> dict:
         
         # Extract 7-digit numbers from filenames and convert to integers
         central_ID_numbers = [
-            int(name) for file in filenames if (name := extract_run_pattern(pattern=r'\d{7}', arg=file))
+            int(name) for file in filenames if (name := extract_pattern(pattern=r'\d{7}', arg=file))
         ]
         
     else:

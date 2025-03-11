@@ -68,8 +68,15 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
     import torch.nn as nn
     
     torch.manual_seed(p['torch seed'])
-    network_details = {'input size': p['input size'], 'hidden size': p['hidden layer size'], 'epochs': p['number of epochs'],
-                       'batch size': p['batch size'], 'learning rate': p['learning rate'], 'dropout': p['dropout probability']}
+    network_details = {'input size': p['input size'], 'hidden size': p['hidden layer size'],
+                       'epochs': p['number of epochs'],'batch size': p['batch size'], 
+                       'learning rate': p['learning rate'], 'dropout': p['dropout probability']}
+    
+    # variables to remove at the end of each iteration  
+    variables_to_delete = ['iteration_data', 'iteration_results',
+                           'training_data', 'training_dict', 'train_running_dict',
+                           'testing_data', 'testing_dict', 'testing_running_dict',
+                           'testing_in_training_dict', 'train_test_running_dict', 'pollute_summary']
 
     if p['num_vars'] == 1:
     
@@ -80,6 +87,7 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
             
             # Initialize the results dictionary for this iteration
             iteration_results, accuracy_df, f1_df = initialize_new_ml_iteration(p = p,
+                                                                                dirs = dirs,
                                                                                 iteration_number = iteration_number,
                                                                                 iteration_inds=None,
                                                                                 accuracy_df = accuracy_df,
@@ -94,7 +102,7 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
             save_checked_spectrum(p, dirs, check_spectrum, iteration_data, iteration_number)
             
             # Format datasets for Pytorch
-            training_data, testing_data, class_distributions = format_pytorch_datasets(p, class_distributions, iteration_data)
+            training_data, testing_data, class_distributions = format_pytorch_datasets(p, dirs, class_distributions, iteration_data)
             
             # Set up model
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -108,14 +116,14 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
             
             # ----- Train model -----
             
-            training_dict, testing_in_training_dict = initialize_training(p, train_loader, test_loader) 
+            training_dict, testing_in_training_dict = initialize_training(p, dirs, train_loader, test_loader) 
             start_time = time.perf_counter()
             model.train()                                                                               # ensure model is set to training state
             
             for epoch_index in range(p['number of epochs']):
                 
                 # set up dictionary with running lists (to be updated through the batches)
-                training_running_dict = initialize_running_dict(p, 'training')
+                training_running_dict = initialize_running_dict(p, dirs, 'training')
     
                 # step through batches
                 for batch_index, (images, labels, IDs, t2s) in enumerate(train_loader):
@@ -139,7 +147,7 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
                 with torch.no_grad():
                     
                     # set up dictionary with running lists (to be updated through the batches)
-                    train_test_running_dict = initialize_running_dict(p, 'testing in training')
+                    train_test_running_dict = initialize_running_dict(p, dirs, 'testing in training')
                     
                     for batch_index, (images, labels, IDs, t2s) in enumerate(test_loader):
                         
@@ -160,14 +168,14 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
                                                  training_dict, testing_in_training_dict)
             
             # save figures for loss and accuracy (if user requested)
-            save_ml_reports(p, training_dict, testing_in_training_dict, iteration_number)
+            save_ml_reports(p, dirs, training_dict, testing_in_training_dict, iteration_number)
             
             # ----- Test model -----
                 
             model.eval()            # set the model to evaluation mode
             with torch.no_grad():   # gradients turned off
                 
-                testing_running_dict = initialize_running_dict(p, 'testing')
+                testing_running_dict = initialize_running_dict(p, dirs, 'testing')
                 for batch_index, (images, labels, IDs, t2s) in enumerate(test_loader):
                     
                     images = flatten(images).to(device)
@@ -180,18 +188,26 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
                 testing_dict = log_testing_outcomes(testing_running_dict, classes, len(test_loader))
                     
             # ----- End iteration: process and save results -----
+            update_dataframes_post_testing(p = p, 
+                                           dirs = dirs, 
+                                           iteration_number = iteration_number, 
+                                           iteration_results = iteration_results, 
+                                           testing_dict = testing_dict, 
+                                           accuracy_df = accuracy_df, 
+                                           f1_df = f1_df)
             
-            update_dataframes_post_testing(p, iteration_number, iteration_results, testing_dict, accuracy_df, f1_df)
-            
-            save_iteration_outputs(p, network_details, classes, class_distributions, 
-                                        training_dict, testing_in_training_dict, testing_dict, 
-                                        iteration_number, iteration_results, pollute_summary)
+            save_iteration_outputs(p = p, 
+                                   dirs = dirs,
+                                   network_details = network_details, 
+                                   classes = classes, 
+                                   class_distributions = class_distributions, 
+                                   training_dict = training_dict, 
+                                   testing_in_training_dict = testing_in_training_dict, 
+                                   testing_dict = testing_dict, 
+                                   iteration_number = iteration_number, 
+                                   iteration_results = iteration_results, 
+                                   pollute_summary = pollute_summary)
                 
-            # remove large variables before heading into next iteration  
-            variables_to_delete = ['iteration_data', 'iteration_results',
-                                   'training_data', 'training_dict', 'train_running_dict',
-                                   'testing_data', 'testing_dict', 'testing_running_dict',
-                                   'testing_in_training_dict', 'train_test_running_dict', 'pollute_summary']
             remove_workspace_variables(variables_to_delete)
 
     elif p['num_vars'] == 2:
@@ -205,6 +221,7 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
                 
                 # Initialize the results dictionary for this iteration
                 iteration_results, accuracy_df, f1_df = initialize_new_ml_iteration(p = p, 
+                                                                                    dirs = dirs,
                                                                                     iteration_number = count,
                                                                                     iteration_inds=[pass1_ind, pass2_ind],
                                                                                     accuracy_df = accuracy_df,
@@ -218,7 +235,7 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
                 save_checked_spectrum(p, dirs, check_spectrum, iteration_data, iteration_number = count)                             
                 
                 # Format datasets for Pytorch
-                training_data, testing_data, class_distributions = format_pytorch_datasets(p, class_distributions, iteration_data)
+                training_data, testing_data, class_distributions = format_pytorch_datasets(p, dirs, class_distributions, iteration_data)
                 
                 # ----- Set up model -------
                 
@@ -235,14 +252,14 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
                 
                 # ----- Train model -----
                 
-                training_dict, testing_in_training_dict = initialize_training(p, train_loader, test_loader) 
+                training_dict, testing_in_training_dict = initialize_training(p, dirs, train_loader, test_loader) 
                 start_time = time.perf_counter()
                 model.train()                                                                               # ensure model is set to training state
                 
                 for epoch_index in range(p['number of epochs']):
                     
                     # set up dictionary with running lists (to be updated through the batches)
-                    training_running_dict = initialize_running_dict(p, 'training')
+                    training_running_dict = initialize_running_dict(p, dirs, 'training')
         
                     # step through batches
                     for batch_index, (images, labels, IDs, t2s) in enumerate(train_loader):
@@ -266,7 +283,7 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
                     with torch.no_grad():
                         
                         # set up dictionary with running lists (to be updated through the batches)
-                        train_test_running_dict = initialize_running_dict(p, 'testing in training')
+                        train_test_running_dict = initialize_running_dict(p, dirs, 'testing in training')
                         
                         for batch_index, (images, labels, IDs, t2s) in enumerate(test_loader):
                             
@@ -291,6 +308,7 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
                 
                 # save figures for loss and accuracy (if user requested)
                 save_ml_reports(p = p, 
+                                dirs = dirs,
                                 training_dict = training_dict, 
                                 testing_in_training_dict = testing_in_training_dict, 
                                 iteration_number = count)
@@ -300,7 +318,7 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
                 model.eval()            # set the model to evaluation mode
                 with torch.no_grad():   # gradients turned off
                     
-                    testing_running_dict = initialize_running_dict(p, 'testing')
+                    testing_running_dict = initialize_running_dict(p, dirs, 'testing')
                     for batch_index, (images, labels, IDs, t2s) in enumerate(test_loader):
                         
                         images = flatten(images).to(device)
@@ -313,7 +331,8 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
                     testing_dict = log_testing_outcomes(testing_running_dict, classes, len(test_loader))
                         
                 # ----- End iteration: process and save results -----
-                update_dataframes_post_testing(p = p, 
+                update_dataframes_post_testing(p = p,
+                                               dirs = dirs,
                                                iteration_number = count, 
                                                iteration_results = iteration_results, 
                                                testing_dict = testing_dict, 
@@ -321,6 +340,7 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
                                                f1_df = f1_df)
                 
                 save_iteration_outputs(p = p, 
+                                       dirs = dirs,
                                        network_details = network_details, 
                                        classes = classes, 
                                        class_distributions = class_distributions, 
@@ -338,7 +358,7 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
-def format_pytorch_datasets(p: dict, class_distributions: dict, iteration_data: dict) -> tuple:
+def format_pytorch_datasets(p: dict, dirs: dict, class_distributions: dict, iteration_data: dict) -> tuple:
     """
     Prepares datasets for PyTorch training and testing.
     
@@ -377,7 +397,7 @@ def format_pytorch_datasets(p: dict, class_distributions: dict, iteration_data: 
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
-def initialize_new_ml_iteration(p: dict, iteration_number: int, iteration_inds: list, accuracy_df: pd.DataFrame, f1_df: pd.DataFrame) -> tuple:
+def initialize_new_ml_iteration(p: dict, dirs: dict, iteration_number: int, iteration_inds: list, accuracy_df: pd.DataFrame, f1_df: pd.DataFrame) -> tuple:
     """
     Initializes a new ML iteration by setting up the required parameters.
     
@@ -438,7 +458,7 @@ def initialize_new_ml_iteration(p: dict, iteration_number: int, iteration_inds: 
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
-def initialize_running_dict(p, stage):
+def initialize_running_dict(p, dirs, stage):
 
     if stage == 'training':
         running_dict = {'number of images': [], 
@@ -470,15 +490,15 @@ def initialize_running_dict(p, stage):
                         }   
         
     else:
-        print_to_log_file(dirs['log file'],"ERROR: unsupported stage requested. Exiting.")
-        raise Exception("ERROR: Unsupported stage requested.")
-        sys.exit()
+        error_message = f"ERROR: Unsupported stage '{stage}' requested. Valid options: ['training', 'testing in training', 'testing']."
+        print_to_log_file(dirs['log file'], error_message)
+        raise ValueError(error_message)
     
     return running_dict
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
-def initialize_training(p, train_loader, test_loader):
+def initialize_training(p, dirs, train_loader, test_loader):
     
     print_to_log_file(dirs['log file'],'TRAINING STAGE')
     
@@ -605,7 +625,7 @@ def log_testing_outcomes(running_dict, classes, n_batches):
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
-def save_iteration_outputs(p, network_details, classes, class_distributions, 
+def save_iteration_outputs(p, dirs, network_details, classes, class_distributions, 
                            training_dict, testing_in_training_dict, testing_dict, 
                            iteration_number, iteration_results, pollute_summary):
   
@@ -626,7 +646,7 @@ def save_iteration_outputs(p, network_details, classes, class_distributions,
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .         
 
-def save_ml_reports(p, training_dict, testing_in_training_dict, iteration_number):
+def save_ml_reports(p, dirs, training_dict, testing_in_training_dict, iteration_number):
     if p['save_ML_report_images'] == 'True':
         try:
             import os
@@ -655,7 +675,7 @@ def save_ml_reports(p, training_dict, testing_in_training_dict, iteration_number
     
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .            
         
-def update_dataframes_post_testing(p, iteration_number, iteration_results, testing_dict, accuracy_df, f1_df):
+def update_dataframes_post_testing(p, dirs, iteration_number, iteration_results, testing_dict, accuracy_df, f1_df):
     
     if p['num_vars'] == 1:
         print_to_log_file(dirs['log file'], f'''~~~ RESULTS ~~~

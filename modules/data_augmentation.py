@@ -5,7 +5,6 @@ Module containing functions for data preprocessing and augmentation, including n
 from copy import deepcopy
 import numpy as np
 from utils import print_to_log_file
-import sys
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
@@ -32,9 +31,10 @@ def add_noise(data_dict: dict, logfilename: str, method: str, noise_fraction: fl
     # SeedVec = np.arange(start = startSeed, stop = startSeed + data_dict['Number of systems'], step = 1, dtype = int)
     SeedVec = deepcopy(data_dict['system ID numbers'])
     
-    if method not in ['max_scaling', 'profile_scaling']:
-        print_to_log_file(logfilename, " ERROR: invalid noise method specified. Now exiting...")
-        sys.exit()
+    if method not in ['additive', 'intensity-dependent']:
+        error_message = f"ERROR: Invalid noise method '{method}' specified. Valid options are: ['additive', 'intensity-dependent']."
+        print_to_log_file(logfilename, error_message)
+        raise ValueError(error_message)
     
     
     if method == 'additive':

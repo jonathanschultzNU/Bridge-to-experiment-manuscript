@@ -1,5 +1,6 @@
 import os
-from pathlib import Path
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
 def get_directories():
     """
@@ -8,10 +9,10 @@ def get_directories():
     """
     
     # Allow setting database directory via environment variable
-    database_dir = os.getenv("DATABASE_DIR", "/path/to/database")  # Default if not set
+    # database_dir = os.getenv("DATABASE_DIR", "/path/to/database")  # Default if not set
     
-    # Manual specification
-    database_dir = Path(r"C:\Users\schul\Documents\Coding\Python\Manuscript Repositories\Mini_database")
+    # OR: Manual specification
+    database_dir = os.path.join(os.path.dirname(os.getcwd()), "Mini_database")
     
     # Ensure the user didn't forget to set the path
     if database_dir == "/path/to/database":

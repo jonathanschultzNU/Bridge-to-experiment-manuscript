@@ -2,10 +2,10 @@
 Module containing helper functions for logging, debugging, and other utilities.
 """
 
-import sys
 import pandas as pd
-from git import Repo, 
+from git import Repo, exc
 import re
+import numpy as np
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
