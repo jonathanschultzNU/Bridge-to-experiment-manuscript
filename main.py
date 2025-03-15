@@ -4,12 +4,11 @@ Main code for Bridge-to-experiment-manuscript repo
 
 import os
 import pickle
-from modules.config import get_directories
-from modules.ml_model import get_num_ml_iterations
-from modules.utils import print_to_log_file, check_inputs, convert_parameter_datatypes, initalize_dataframes, read_input_file, get_git_info
+from config import get_directories
+from modules.utils import print_to_log_file, check_inputs, convert_parameter_datatypes, initialize_dataframes, read_input_file, get_git_info
 from modules.data_processing import load_central_dataset, classify_central_dataset
 from modules.debugging_tools import initialize_check_system
-from modules.training_pipeline import ML_iterations
+from modules.training_pipeline import ML_iterations, get_num_ml_iterations
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
@@ -32,7 +31,7 @@ if __name__ == "__main__":
     
     print_to_log_file(dirs['log file'], f'''\n
 Git Repository Information:
-   {get_git_info()}
+{get_git_info()}
 
 Working directory: {dirs['working']}
 job name : {p['jobname']}''')
@@ -47,7 +46,7 @@ job name : {p['jobname']}''')
     central_data, class_information = classify_central_dataset(p, dirs['labels'], central_data)
     
     # Initialize objects for later
-    p, accuracy_df, f1_df = initalize_dataframes(p)
+    p, accuracy_df, f1_df = initialize_dataframes(p)
     check_spectrum = initialize_check_system(p, central_data)
     
     # ML iterations      

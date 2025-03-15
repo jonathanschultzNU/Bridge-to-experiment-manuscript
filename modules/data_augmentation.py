@@ -4,7 +4,7 @@ Module containing functions for data preprocessing and augmentation, including n
 
 from copy import deepcopy
 import numpy as np
-from utils import print_to_log_file
+from modules.utils import print_to_log_file
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
@@ -28,7 +28,7 @@ def add_noise(data_dict: dict, logfilename: str, method: str, noise_fraction: fl
     data_dict['noise width'] = np.zeros((data_dict['number of systems'], data_dict['nt2']))
     data_dict['signal width'] = np.zeros((data_dict['number of systems'], data_dict['nt2']))
     
-    SeedVec = deepcopy(data_dict['system index'])
+    SeedVec = deepcopy(data_dict['system ID numbers'])
     
     if method not in ['additive', 'intensity-dependent']:
         error_message = f"ERROR: Invalid noise method '{method}' specified. Valid options are: ['additive', 'intensity-dependent']."
@@ -82,23 +82,28 @@ def add_noise(data_dict: dict, logfilename: str, method: str, noise_fraction: fl
             
             # log signal and noise widths
             for j in range(data_dict['nt2']):
-                
                 indv_spec = deepcopy(data_dict['spectra'][i,:,:,j])
                 data_dict['signal width'][i][j] = np.mean(np.abs(indv_spec))
                 
-                indv_noise = deepcopy(noise_array[i,:,:,j])
+                indv_noise = deepcopy(noise_array[0,:,:,j])
                 data_dict['noise width'][i][j] = np.mean(np.abs(indv_noise))
               
             # add noise    
-            data_dict['spectra'][i,:,:,:] = data_dict['spectra'][0,:,:,:] + noise_array
+            data_dict['spectra'][i,:,:,:] = data_dict['spectra'][i,:,:,:] + noise_array
     
     if not SNR_filter:
         return data_dict, {}
+    
+    per_system = {'system ID numbers': [],
+                  'SNR at t2 = 0': [],
+                  'SNR at t2 = end': [],
+                  'avg SNR of all t2': [],
+                  'avg SNR of dropped t2': []}
         
     # SNR Filtering
     SNR_summary = {
-            'per system': {},
-            'system index': [],
+            'per system': per_system,
+            'system ID numbers': [],
             'SNR at t2 = 0': [],
             'SNR at t2 = end': [],
             'avg SNR of all t2': [],
@@ -115,7 +120,7 @@ def add_noise(data_dict: dict, logfilename: str, method: str, noise_fraction: fl
         data_dict['dropped images'][system_ID] = np.ones(data_dict['nt2'], dtype=bool)
         drop_count_perSys, avg_keep_SNR_perSys, avg_drop_SNR_perSys, avg_total_SNR_perSys = 0, 0, 0, 0
         
-        SNR_summary['per system']['system index'].append(system_ID.copy())
+        SNR_summary['per system']['system ID numbers'].append(system_ID.copy())
         
         for j in range(data_dict['nt2']):
             noise_width = data_dict['noise width'][i][j]
@@ -133,6 +138,7 @@ def add_noise(data_dict: dict, logfilename: str, method: str, noise_fraction: fl
             avg_total_SNR_perSys += SNR
             
             if SNR < threshold:
+                # Spectra will be tagged as False so that they are removed when mask is applied in PytorchDataset
                 data_dict['dropped images'][system_ID][j] = False
                 drop_count += 1
                 drop_count_perSys += 1
@@ -148,27 +154,24 @@ def add_noise(data_dict: dict, logfilename: str, method: str, noise_fraction: fl
             SNR_summary['per system']['avg SNR of kept t2'].append(avg_keep_SNR_perSys/(data_dict['nt2']-drop_count_perSys))
             SNR_summary['per system']['avg SNR of dropped t2'].append(avg_drop_SNR_perSys/drop_count_perSys)
             
-    SNR_summary['number of total spectra'] = spec_count
-    SNR_summary['avg SNR of all spectra'] = avg_total_SNR/spec_count
+    SNR_summary.update({'number of total spectra': spec_count, 
+                        'avg SNR of all spectra': avg_total_SNR/spec_count,
+                        'avg SNR of kept spectra': avg_keep_SNR/(spec_count-drop_count)
+                        })
     SNR_summary['avg SNR of t2 = 0 spectra'] = np.mean(SNR_summary['per system']['SNR at t2 = 0'])
-    SNR_summary['avg SNR of kept spectra'] = avg_keep_SNR/(spec_count-drop_count)
     
     if drop_count > 0:
+        SNR_summary.update({'number of dropped spectra': drop_count,
+                            'avg SNR of dropped spectra': avg_drop_SNR/drop_count})
         
-        SNR_summary['number of dropped spectra'] = drop_count
-        SNR_summary['avg SNR of dropped spectra'] = avg_drop_SNR/drop_count
-        
-        print_to_log_file(logfilename, f'''\n
- ! ! ! ! ! DROP WARNING ! ! ! ! !
- 
+        print_to_log_file(logfilename, f'''\n! DROP WARNING !\n
 spectra dropped (low SNR): {drop_count} of {spec_count} ({100*drop_count/spec_count:.2f} %)
 Average SNR of dropped spectra: {avg_drop_SNR/drop_count}
 Average SNR of kept spectra: {avg_keep_SNR/(spec_count-drop_count)}
 Average SNR of all spectra: {avg_total_SNR/spec_count:.2f}\n''')
 
     else:
-        print_to_log_file(logfilename, f'''\n
-No spectra were dropped due to low SNR. Average SNR of all spectra: {avg_total_SNR/spec_count:.2f}\n''')
+        print_to_log_file(logfilename, f'''\nNo spectra were dropped due to low SNR. Average SNR of all spectra: {avg_total_SNR/spec_count:.2f}\n''')
    
     return data_dict, SNR_summary
 
@@ -208,7 +211,7 @@ def apply_pump(data_dict: dict, carrier: float, bandwidth: float) -> dict:
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
-def pollute_data(p: dict, central_data: dict, iteration_inds: list) -> tuple:
+def pollute_data(p: dict, dirs: dict, central_data: dict, iteration_inds: list) -> tuple:
     """
     Applies data modifications such as noise addition or pump effects.
     
@@ -222,7 +225,7 @@ def pollute_data(p: dict, central_data: dict, iteration_inds: list) -> tuple:
     """
     
     data = deepcopy(central_data)
-    data = self_normalize_datasets(data, p['log filename'])
+    data = self_normalize_datasets(data, dirs['log file'])
     
     if p['num_vars'] == 1:
         
@@ -230,7 +233,7 @@ def pollute_data(p: dict, central_data: dict, iteration_inds: list) -> tuple:
         if p['task'] == 'noise':
             
             data, SNR_summary = add_noise(data, 
-                                          p['log filename'], 
+                                          dirs['log file'], 
                                           p['noise method'], 
                                           p['noise fraction'][iteration_number], 
                                           p['SNR filter'], 

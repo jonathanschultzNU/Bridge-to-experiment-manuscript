@@ -25,8 +25,8 @@ def get_directories():
     # Define directories
     dirs = {'working': os.getcwd(),
             'database': database_dir,
-            'dataset': os.path.join(database_dir, '/data_subset.pkl'),
-            'labels': os.path.join(database_dir, 'data_subset_system_parameters.csv')
+            'dataset': os.path.join(database_dir, 'mini_dataset.pkl'),
+            'labels': os.path.join(database_dir, 'mini_dataset_system_parameters.csv')
             }
     
     return dirs

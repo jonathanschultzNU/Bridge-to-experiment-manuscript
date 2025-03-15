@@ -37,4 +37,41 @@ Ensure you have the necessary dependencies installed:
 
 pip install torch numpy pandas matplotlib scikit-learn
 
+
+
+
 Clean data are loaded into a 'central dataset' (avoids re-loading data between scan points)
+
+
+input parameter:
+
+jobname = intnoise
+task = noise
+noise method = intensity-dependent
+noise fraction = 0, 0.01
+SNR filter = True
+SNR threshold = 0.01
+class bounds = -805, -755, -705, -655, -605, -555, -505, -455, -405, -355, -305, -255, -205, -155, -105, -55, -5, 5, 55, 105, 155, 205, 255, 305, 355, 405, 455, 505, 555, 605, 665, 705, 755, 805 
+input size = 22801
+hidden layer size = 100
+number of epochs = 5
+batch size = 100
+learning rate = 0.01
+dropout probability = 0.2
+train-test split = 0.8
+spec save interval = 1
+
+
+jobname = bandwidth_center_frequency
+task = bandwidth and center frequency
+bandwidth = 10000, 2000, 1000
+center frequency = 12000, 14500, 16500
+class bounds = -805, -755, -705, -655, -605, -555, -505, -455, -405, -355, -305, -255, -205, -155, -105, -55, -5, 5, 55, 105, 155, 205, 255, 305, 355, 405, 455, 505, 555, 605, 665, 705, 755, 805 
+input size = 22801
+hidden layer size = 100
+number of epochs = 5
+batch size = 100
+learning rate = 0.01
+dropout probability = 0.2
+train-test split = 0.8
+spec save interval = 1

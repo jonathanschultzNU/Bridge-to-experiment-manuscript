@@ -72,8 +72,7 @@ def check_inputs(p, dirs):
         raise ValueError(f"Unsupported task requested: {p['task']}")
 
     # Required keys
-    required_keys = [
-        'data path', 'data labels', 'class bounds', 'input size', 'hidden layer size',
+    required_keys = ['class bounds', 'input size', 'hidden layer size',
         'number of epochs', 'batch size', 'learning rate', 'dropout probability'
     ]
     
@@ -155,8 +154,8 @@ def get_default_parameters(arg):
     """
     
     default_dict = {'save ML output': 'True', 
-                    'save ML report images': 'True', 
-                    'save 2D plots': 'True',
+                    'save ML report images': 'False', 
+                    'save 2D plots': 'False',
                     'spec save interval': 5,
                     'check-system ID': 11,
                     't2 truncate': 'False',

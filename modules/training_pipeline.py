@@ -4,17 +4,16 @@ Module to manage the training and testing of the ML model, including dataset for
 
 import pandas as pd
 import torch
-from torch.utils.data import DataLoader
-from sklearn.metrics import top_k_accuracy_score
-from collections import Counter
 import time
 import numpy as np
 import pickle
-import sys
-from data_augmentation import pollute_data
-from ml_model import PyTorchDataset, f1_score_custom
-from visualization import save_checked_spectrum, create_and_save_line_plot
-from utils import print_to_log_file, remove_workspace_variables
+from torch.utils.data import DataLoader
+from sklearn.metrics import top_k_accuracy_score
+from collections import Counter
+from modules.data_augmentation import pollute_data
+from modules.ml_model import PyTorchDataset, f1_score_custom
+from modules.visualization import save_checked_spectrum, create_and_save_line_plot
+from modules.utils import print_to_log_file, remove_workspace_variables
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
@@ -26,22 +25,22 @@ def get_num_ml_iterations(p, dirs):
     p: A dictionary containing required parameters.
     """
     
-    if p['task'] == 'noise_addition':
-        p['total passes'] = len(p['noise_fraction'])
+    if p['task'] == 'noise':
+        p['total passes'] = len(p['noise fraction'])
         p['num_vars'] = 1
         
-    elif p['task'] == 'pump_bandwidth':    
-        p['total passes'] = len(p['pump_bandwidth'])
+    elif p['task'] == 'bandwidth':    
+        p['total passes'] = len(p['bandwidth'])
         p['num_vars'] = 1
         
-    elif p['task'] == 'pump_center':    
-        p['total passes'] = len(p['pump_center'])
+    elif p['task'] == 'center frequency':    
+        p['total passes'] = len(p['center frequency'])
         p['num_vars'] = 1
         
-    elif p['task'] == 'dual_pump':    
-        p['total passes'] = len(p['pump_center']) * len(p['pump_bandwidth'])
-        p['passes per variable'] = {1: len(p['pump_bandwidth']),
-                                    2: len(p['pump_center'])
+    elif p['task'] == 'bandwidth and center frequency':    
+        p['total passes'] = len(p['bandwidth']) * len(p['center frequency'])
+        p['passes per variable'] = {'bandwidth': len(p['bandwidth']),
+                                    'center frequency': len(p['center frequency'])
                                     }
         p['num_vars'] = 2
     
@@ -64,7 +63,7 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
     Returns:
         tuple: (Updated parameters, accuracy dataframe, F1-score dataframe)
     """
-    from ml_model import NeuralNet
+    from modules.ml_model import NeuralNet
     import torch.nn as nn
     
     torch.manual_seed(p['torch seed'])
@@ -95,6 +94,7 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
             
             # Generate polluted data
             iteration_data, pollute_summary = pollute_data(p = p,
+                                                           dirs = dirs,
                                                            central_data = central_data, 
                                                            iteration_inds=[iteration_number])
             
@@ -213,8 +213,8 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
     elif p['num_vars'] == 2:
         
         count = 0
-        for pass1_ind in range(p['passes per variable'][1]):
-            for pass2_ind in range(p['passes per variable'][2]):
+        for pass_index_bandwidth in range(p['passes per variable']['bandwidth']):
+            for pass_index_center_frequency in range(p['passes per variable']['center frequency']):
             
                 class_distributions = {'training': [], 
                                        'testing': []}
@@ -223,13 +223,14 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
                 iteration_results, accuracy_df, f1_df = initialize_new_ml_iteration(p = p, 
                                                                                     dirs = dirs,
                                                                                     iteration_number = count,
-                                                                                    iteration_inds=[pass1_ind, pass2_ind],
+                                                                                    iteration_inds=[pass_index_bandwidth, pass_index_center_frequency],
                                                                                     accuracy_df = accuracy_df,
                                                                                     f1_df = f1_df)
                 # Generate polluted data
                 iteration_data, pollute_summary = pollute_data(p = p, 
+                                                               dirs = dirs,
                                                                central_data = central_data, 
-                                                               iteration_inds=[pass1_ind, pass2_ind])
+                                                               iteration_inds=[pass_index_bandwidth, pass_index_center_frequency])
                 
                 # Save spectrum if requested
                 save_checked_spectrum(p, dirs, check_spectrum, iteration_data, iteration_number = count)                             
@@ -351,7 +352,7 @@ def ML_iterations(p: dict, dirs: dict, central_data: dict, classes: dict, check_
                                        iteration_results = iteration_results, 
                                        pollute_summary = pollute_summary)
                 
-                remove_workspace_variables()
+                remove_workspace_variables(variables_to_delete)
                 count += 1
                 
     return p, accuracy_df, f1_df
@@ -414,15 +415,8 @@ def initialize_new_ml_iteration(p: dict, dirs: dict, iteration_number: int, iter
     if p['num_vars'] == 1:
         
         print_to_log_file(dirs['log file'],f"----------------\nIteration {iteration_number+1} of {p['total passes']}")
-        iteration_variable_name = p['scan_item_df']
-        
-        if p['task'] == 'ablation':
-            if iteration_number == 0:
-                iteration_variable_value = None
-            else:
-                iteration_variable_value = p[p['scan key']][iteration_number-1]
-        else:
-            iteration_variable_value = p[p['scan key']][iteration_number]
+        iteration_variable_name = p['scan key']
+        iteration_variable_value = p[p['scan key']][iteration_number]
             
         iteration_results = {'scanned item': iteration_variable_name, 
                              'scanned item value': iteration_variable_value
@@ -439,7 +433,7 @@ def initialize_new_ml_iteration(p: dict, dirs: dict, iteration_number: int, iter
         iteration_variable2_name = p['scan key']['2']
         
         iteration_variable1_value = p[p['scan key']['1']][iteration_inds[0]]
-        iteration_variable2_value = p[p['scan key']['1']][iteration_inds[1]]
+        iteration_variable2_value = p[p['scan key']['2']][iteration_inds[1]]
         
         iteration_results = {'scanned item 1': iteration_variable1_name, 
                              'scanned item 1 value': iteration_variable1_value,
@@ -463,7 +457,7 @@ def initialize_running_dict(p, dirs, stage):
     if stage == 'training':
         running_dict = {'number of images': [], 
                         'number of correct predictions': [],
-                        'system index': [],
+                        'system ID numbers': [],
                         't2s': [],
                         'labels': [], 
                         'predictions': [], 
@@ -473,7 +467,7 @@ def initialize_running_dict(p, dirs, stage):
     elif stage == 'testing in training':
         running_dict = {'number of images': [], 
                         'number of correct predictions': [],
-                        'system index': [],
+                        'system ID numbers': [],
                         't2s': [],
                         'labels': [], 
                         'predictions': [], 
@@ -482,7 +476,7 @@ def initialize_running_dict(p, dirs, stage):
     elif stage == 'testing':
         running_dict = {'number of images': [], 
                         'number of correct predictions': [],
-                        'system index': [],
+                        'system ID numbers': [],
                         't2s': [],
                         'labels': [], 
                         'predictions': [], 
@@ -509,7 +503,7 @@ def initialize_training(p, dirs, train_loader, test_loader):
     # dictionaries to keep track of items per epoch per batch
     training_dict = {'number of batches': n_batches_training,
                      'epoch index': [], 
-                     'system index': [],
+                     'system ID numbers': [],
                      't2s': [],
                      'labels': [],
                      'predictions': [],
@@ -528,7 +522,7 @@ def initialize_training(p, dirs, train_loader, test_loader):
     
     testing_in_training_dict = {'number of batches': n_batches_testing,
                                 'epoch index': [], 
-                                'system index': [],
+                                'system ID numbers': [],
                                 't2s': [],
                                 'labels': [],
                                 'predictions': [],
@@ -557,7 +551,7 @@ def log_epoch_outcomes(epoch_index, stage_dict, running_dict, isTrain=False):
     
     stage_dict['epoch index'].append(epoch_index)
     stage_dict['number of images'].append(n_images_per_epoch)
-    stage_dict['system index'].append(running_dict['system index'])
+    stage_dict['system ID numbers'].append(running_dict['system ID numbers'])
     stage_dict['t2s'].append(running_dict['t2s'])
     stage_dict['labels'].append(running_dict['labels'])
     stage_dict['predictions'].append(running_dict['predictions'])
@@ -595,7 +589,7 @@ def log_testing_outcomes(running_dict, classes, n_batches):
     
     results_dict = {'number of batches': n_batches,
                     'number of images': n_images,
-                    'system index': running_dict['system index'],
+                    'system ID numbers': running_dict['system ID numbers'],
                     't2s': running_dict['t2s'],
                     'labels': running_dict['labels'],
                     'predictions': running_dict['predictions'],
@@ -629,7 +623,7 @@ def save_iteration_outputs(p, dirs, network_details, classes, class_distribution
                            training_dict, testing_in_training_dict, testing_dict, 
                            iteration_number, iteration_results, pollute_summary):
   
-    if p['save_ML_output'] == 'True':
+    if p['save ML output'] == 'True':
         
         print_to_log_file(dirs['log file'], f'Saving results for iteration {iteration_number+1}...')
         
@@ -647,7 +641,7 @@ def save_iteration_outputs(p, dirs, network_details, classes, class_distribution
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .         
 
 def save_ml_reports(p, dirs, training_dict, testing_in_training_dict, iteration_number):
-    if p['save_ML_report_images'] == 'True':
+    if p['save ML report images'] == 'True':
         try:
             import os
             save_loc = os.path.join(dirs['outputs'],"Training_plots")
@@ -679,7 +673,7 @@ def update_dataframes_post_testing(p, dirs, iteration_number, iteration_results,
     
     if p['num_vars'] == 1:
         print_to_log_file(dirs['log file'], f'''~~~ RESULTS ~~~
-{p['scan_item_df']} = {iteration_results['scanned item value']}''')
+{p['scan key']} = {iteration_results['scanned item value']}''')
 
     elif p['num_vars'] == 2:
         print_to_log_file(dirs['log file'], f'''~~~ RESULTS ~~~
@@ -732,7 +726,7 @@ def update_running_dict(running_dict, IDs, t2s, labels, outputs, stage, loss=Non
     
     running_dict['number of images'].append(number_of_images)
     running_dict['number of correct predictions'].append(number_correct)
-    running_dict['system index'].extend(IDs.squeeze().cpu().numpy())
+    running_dict['system ID numbers'].extend(IDs.squeeze().cpu().numpy())
     running_dict['t2s'].extend(t2s.squeeze().cpu().numpy())
     running_dict['labels'].extend(labels.cpu().numpy())
     running_dict['predictions'].extend(predictions.cpu().numpy())

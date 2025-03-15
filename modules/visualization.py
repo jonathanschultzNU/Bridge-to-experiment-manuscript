@@ -5,7 +5,7 @@ Module to handle all plotting and visualization functions related to spectra and
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
-from utils import print_to_log_file
+from modules.utils import print_to_log_file
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
@@ -91,16 +91,16 @@ def save_checked_spectrum(p: dict, dirs: dict, check_spectrum: dict, iteration_d
         iteration_data (dict): Dataset of the current iteration.
         iteration_number (int): Iteration index.
     """
-    if p['save_2D_plots'] == 'True':
+    if p['save 2D plots'] == 'True':
         
         import os
-        save_loc = os.path.join(p['outputs_path'],"2D_check_plots")
+        save_loc = os.path.join(dirs['outputs'],"2D_check_plots")
         if not os.path.exists(save_loc):
             os.makedirs(save_loc)
             
-        if (iteration_number+1) % p['spec_save_interval'] == 0:
+        if (iteration_number+1) % p['spec save interval'] == 0:
             try:
-                check_spectrum['spectrum'] = iteration_data['spectra'][check_spectrum['system index selected'],:,:,0]
+                check_spectrum['spectrum'] = iteration_data['spectra'][check_spectrum['selected system index'],:,:,0]
                 plot_spectrum(check_spectrum, f"{save_loc}/job{p['jobname']}_spec_{iteration_number+1}.png")
                 with open(f"{save_loc}/job{p['jobname']}_spec_{iteration_number+1}.pkl", 'wb') as f:
                     pickle.dump(check_spectrum, f)

@@ -36,7 +36,7 @@ def initialize_check_system(p, central_data):
 
     Returns:
         dict: A dictionary containing the selected system's details:
-            - 'system index selected' (int): The index of the selected system in `central_data`.
+            - 'selected system index' (int): The index of the selected system in `central_data`.
             - 'w1' (numpy.ndarray): The w1 axis values for the selected system.
             - 'w3' (numpy.ndarray): The w3 axis values for the selected system.
             - 't2' (float): The t2 waiting time value for the selected system.
@@ -49,7 +49,7 @@ def initialize_check_system(p, central_data):
         import random
         system_index_selected = random.randint(0, central_data['Number of systems']-1)
         
-    check_spectrum = {'system index selected': system_index_selected, 
+    check_spectrum = {'selected system index': system_index_selected, 
                       'w1': central_data['w1'][system_index_selected,:], 
                       'w3': central_data['w3'][system_index_selected,:], 
                       't2': central_data['t2'][system_index_selected, 0], 
