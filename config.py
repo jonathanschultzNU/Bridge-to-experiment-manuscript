@@ -8,15 +8,8 @@ def get_directories():
     Users can set 'DATABASE_DIR' as an environment variable or modify database_dir below.
     """
     
-    # Allow setting database directory via environment variable
-    # database_dir = os.getenv("DATABASE_DIR", "/path/to/database")  # Default if not set
-    
-    # OR: Manual specification
+    # Specify database bath
     database_dir = os.path.join(os.path.dirname(os.getcwd()), "Mini_database")
-    
-    # Ensure the user didn't forget to set the path
-    if database_dir == "/path/to/database":
-        print("WARNING: Database directory is using the default placeholder. Please update 'config.py'.")
     
     # Validate that database_dir exists
     if not os.path.exists(database_dir):
