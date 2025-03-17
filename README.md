@@ -99,6 +99,7 @@ Each parameter is written as a key = value pair.
 ### **Example Input Files**
 
 #### **Example 1: Noise Addition**
+```bash
 jobname = intensity_noise
 task = noise
 noise method = intensity-dependent
@@ -114,8 +115,10 @@ learning rate = 0.01
 dropout probability = 0.2
 train-test split = 0.8
 spec save interval = 1
+```
 
 #### **Example 2: Bandwidth and Center-Frequency Scanning**
+```bash
 jobname = bandwidth_center_frequency
 task = bandwidth and center frequency
 bandwidth = 10000, 2000, 1000
@@ -129,7 +132,7 @@ learning rate = 0.01
 dropout probability = 0.2
 train-test split = 0.8
 spec save interval = 1
-
+```
 
 ### **Running the Code**
 #### **1. Training the Model**
