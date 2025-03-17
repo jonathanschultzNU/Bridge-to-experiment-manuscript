@@ -55,6 +55,11 @@ pip install torch numpy pandas matplotlib scikit-learn gitpython
 
 ## **Usage**
 
+### **Directory Configuration**
+The package requires you to provide the path to the machine learning dataset and its system parameters 
+(if using the files from Zenodo, these are the `mini_dataset.pkl` and `mini_dataset_system_parameters.csv` files, respectively). 
+These paths MUST be specified in the config.py prior to any calculations.
+
 ### **Setting Up the Input File**
 The model requires an input file specifying parameters for data processing and training.
 Each parameter is written as a key = value pair.
