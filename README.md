@@ -151,18 +151,18 @@ This will:
 After running the code, the following files and directories will be generated:
 
 ##### **Required Outputs**
-All outputs → [job name]_outputs/
-    -This directory will be automatically generated to contain all following outputs
-Performance metrics → accuracies.csv, F1scores.csv
-    -You can open these files to analyze model performance.
+All outputs → [job name]_outputs/  
+    -This directory will be automatically generated to contain all following outputs  
+Performance metrics → accuracies.csv, F1scores.csv  
+    -You can open these files to analyze model performance.  
 
 ##### **Optional Outputs**
 If requested, the following files will also be generated:
 
-2D spectra → /2D_check_plots/[iteration number].png, 2D_check_plots/[iteration number].pkl
-    -Both image files and the image data are saved
-Training reports → /Training_reports/[iteration number].png
-ML reports → /ML_reports/[iteration number].pkl
+2D spectra → /2D_check_plots/[iteration number].png, 2D_check_plots/[iteration number].pkl  
+    -Both image files and the image data are saved  
+Training reports → /Training_reports/[iteration number].png  
+ML reports → /ML_reports/[iteration number].pkl  
     -Detailed results. Save options are full (training and testing), partial (testing), or none.
 
 ---
