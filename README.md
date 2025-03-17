@@ -42,7 +42,7 @@ The package supports:
 First, create and activate a **conda environment** for the project:
 ```bash
 conda env create -f environment.yml
-conda activate my_project_env
+conda activate bridge-to-exp-env
 ```
 This ensures that all required dependencies are installed correctly.
 
