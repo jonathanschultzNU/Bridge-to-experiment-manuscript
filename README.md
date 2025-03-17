@@ -43,7 +43,10 @@ pip install torch numpy pandas matplotlib scikit-learn
 Clean data are loaded into a 'central dataset' (avoids re-loading data between scan points)
 
 
-input parameter:
+input parameters:
+
+
+example input files:
 
 jobname = intnoise
 task = noise

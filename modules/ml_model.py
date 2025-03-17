@@ -26,7 +26,8 @@ def f1_score_custom(y_true, y_pred,
     Returns:
     - f1_scores: dict
         A dictionary where keys are averaging methods and values are the calculated F1 scores.
-        For `average=None`, the value is a tuple of (F1 score list, label list).
+        For `average=None`, the value is a tuple of (F1 score list, label list, label counts).
+
     """
     # Validate average_methods_list
     valid_methods = ['micro', 'macro', 'weighted', None]
@@ -57,14 +58,13 @@ class PyTorchDataset(Dataset):
     """
     Custom dataset class for handling spectral data in PyTorch.
     
-    CLASS ATTRIBUTES
-    -------
-    self.imgs ............ 3D Torch array of all spectra, shape: [# systems x t2 points, w1 points, w3 points]
-    self.img_labels ...... 1D Torch array of classes corresponding to spectra, shape: [# systems x t2 points,]
-    self.img_IDnums ...... 1D Torch array of run ID numbers corresponding to spectra, shape: [# systems x t2 points,]
-    self.img_t2s ......... 1D Torch array of t2 timepoints corresponding to spectra, shape: [# systems x t2 points,]
-    self.num_imgs ........ total number of images in the dataset
-    self.num_sys ......... total number of systems reflected in the dataset
+    Instance Attributes:
+    - imgs (torch.Tensor): 3D tensor of all spectra, shape: [# systems x t2 points, w1 points, w3 points].
+    - img_labels (torch.Tensor): 1D tensor of classes corresponding to spectra, shape: [# systems x t2 points].
+    - img_IDnums (torch.Tensor): 1D tensor of run ID numbers corresponding to spectra, shape: [# systems x t2 points].
+    - img_t2s (torch.Tensor): 1D tensor of t2 timepoints corresponding to spectra, shape: [# systems x t2 points].
+    - num_imgs (int): Total number of images in the dataset.
+    - num_sys (int): Total number of systems reflected in the dataset.
     
     """
     def __init__(self, data, p, isTrain=True):

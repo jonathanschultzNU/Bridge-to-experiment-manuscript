@@ -8,7 +8,7 @@ from config import get_directories
 from modules.utils import print_to_log_file, check_inputs, convert_parameter_datatypes, initialize_dataframes, read_input_file, get_git_info
 from modules.data_processing import load_central_dataset, classify_central_dataset
 from modules.debugging_tools import initialize_check_system
-from modules.training_pipeline import ML_iterations, get_num_ml_iterations
+from modules.training_pipeline import perform_ml_iterations, get_num_ml_iterations
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
@@ -21,8 +21,8 @@ if __name__ == "__main__":
     with open(os.path.join(dirs['working'], "input.txt"), "r") as f:
         p = read_input_file(f)
 
-    dirs['outputs'] = os.path.join(dirs['working'], f"job{p['jobname']}_Outputs")
-    dirs['log file'] = os.path.join(dirs['outputs'], f"job{p['jobname']}.log")
+    dirs['outputs'] = os.path.join(dirs['working'], f"{p['jobname']}")
+    dirs['log file'] = os.path.join(dirs['outputs'], f"{p['jobname']}.log")
     os.makedirs(dirs['outputs'], exist_ok=True)
     
     # set up log file
@@ -50,7 +50,7 @@ job name : {p['jobname']}''')
     check_spectrum = initialize_check_system(p, central_data)
     
     # ML iterations      
-    p, accuracy_df, f1_df = ML_iterations(
+    p, accuracy_df, f1_df = perform_ml_iterations(
         p = p,
         dirs = dirs,
         central_data = central_data,

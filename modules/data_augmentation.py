@@ -21,7 +21,9 @@ def add_noise(data_dict: dict, logfilename: str, method: str, noise_fraction: fl
         threshold (float): SNR threshold for filtering.
     
     Returns:
-        tuple: (Updated dataset, SNR summary dictionary)
+        tuple: 
+            - dict: Updated dataset with added noise.
+            - dict: SNR summary containing statistics about signal-to-noise ratios and dropped spectra.
     """
     
     # generate arrays to log widths of clean spectra and noise

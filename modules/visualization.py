@@ -14,7 +14,8 @@ def plot_spectrum(data_dict: dict, save_path: str):
     Generates a contour plot of a 2D spectrum.
     
     Parameters:
-        data_dict (dict): Contains spectral data and metadata.
+        data_dict (dict): Dictionary containing spectral data and metadata. 
+            Required keys: 'spectrum', 'w1', 'w3', 'system ID number', 't2'.
         save_path (str): File path to save the generated plot.
     """
     minsize = 16

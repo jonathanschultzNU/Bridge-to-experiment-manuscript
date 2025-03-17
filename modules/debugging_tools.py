@@ -3,6 +3,7 @@ Module with functions for validation, debugging, and sanity checks of dataset co
 """
 
 import numpy as np
+import random
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 
@@ -15,7 +16,8 @@ def find_image_index(central_data: dict, ID: int) -> int:
         ID (int): The system ID number to search for.
 
     Returns:
-        int: Index of the dataset entry if found, otherwise None.
+        int or None: Index of the dataset entry if found, otherwise None.
+
     """
     
     sys_index = np.where(central_data['system ID numbers'] == ID)[0]
@@ -45,9 +47,8 @@ def initialize_check_system(p, central_data):
     
     system_index_selected = find_image_index(central_data, p['check-system ID'])
     
-    if system_index_selected == None:
-        import random
-        system_index_selected = random.randint(0, central_data['Number of systems']-1)
+    if system_index_selected is None:
+        system_index_selected = random.randint(0, central_data['number of systems']-1)
         
     check_spectrum = {'selected system index': system_index_selected, 
                       'w1': central_data['w1'][system_index_selected,:], 
